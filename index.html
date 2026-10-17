@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>בדיקת התראות - משפחתיקה</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0b5ed7">
+<style>
+  body { font-family: system-ui, sans-serif; background: #f4f6fa; color: #1a1a1a; margin: 0; padding: 24px; text-align: center; }
+  h1 { font-size: 1.4rem; }
+  #sub { font-size: 1.2rem; padding: 16px 28px; border: 0; border-radius: 14px; background: #0b5ed7; color: #fff; margin: 18px 0; }
+  #status { font-weight: 600; }
+  #log { text-align: left; direction: ltr; background: #fff; border-radius: 10px; padding: 10px; font-size: 12px; white-space: pre-wrap; max-height: 40vh; overflow: auto; }
+</style>
+</head>
+<body>
+<h1>🔔 בדיקת התראות - משפחתיקה</h1>
+<p id="status">שלב 1: לחץ על הכפתור ואשר התראות</p>
+<button id="sub">הפעל התראות בדיקה</button>
+<pre id="log"></pre>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
+<script>
+const EXEC = 'https://script.google.com/macros/s/AKfycbxgZt-UZ-w83xwbYuKyRmvdAfuSQ_fY4WO0ZrhuWH6L0-AY2ZO7igRAd2qNcVwGgl8R/exec';
+const VAPID = 'BJOaFLmpLIL87tyMohEK_6U9vdSOIw0gMQoAdr8tT-kZtjYdSK_P6eZ1BEz581qwMJtqwP3JJFqB-hvcjY_id28';
+const firebaseConfig = {
+  apiKey: "AIzaSyAgOeCgPR1b20xfBLQdJvOTsj3LsXJZSZI",
+  authDomain: "mishpahtica-spike.firebaseapp.com",
+  projectId: "mishpahtica-spike",
+  storageBucket: "mishpahtica-spike.firebasestorage.app",
+  messagingSenderId: "880946685170",
+  appId: "1:880946685170:web:884a06731e8d1a20979c6b"
+};
+const log = m => { document.getElementById('log').textContent += new Date().toLocaleTimeString() + ' ' + m + '\n'; };
+firebase.initializeApp(firebaseConfig);
+const messaging = firebase.messaging();
+let swReg;
+navigator.serviceWorker.register('sw.js').then(r => { swReg = r; log('SW registered: ' + r.scope); }).catch(e => log('SW ERROR: ' + e));
+document.getElementById('sub').onclick = async () => {
+  try {
+    const perm = await Notification.requestPermission();
+    log('permission: ' + perm);
+    if (perm !== 'granted') { document.getElementById('status').textContent = 'לא אושרו התראות'; return; }
+    if (!swReg) swReg = await navigator.serviceWorker.ready;
+    const token = await messaging.getToken({ vapidKey: VAPID, serviceWorkerRegistration: swReg });
+    log('token OK: ' + token.slice(0, 14) + '...');
+    await fetch(EXEC, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ action: 'register', token }) });
+    log('token sent to server');
+    document.getElementById('status').textContent = 'ההרשמה הצליחה! עכשיו סגור את האפליקציה לגמרי וחכה להתראה.';
+  } catch (err) { log('ERROR: ' + err); }
+};
+messaging.onMessage(p => log('foreground message: ' + JSON.stringify(p)));
+</script>
+</body>
+</html>
