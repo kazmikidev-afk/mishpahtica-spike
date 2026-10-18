@@ -473,9 +473,9 @@ function smFlagged(userId, taskId, date) { return (S.showme || []).some(r => r.k
 function declareDialog(K) {
   modal((sh, close) => {
     const dates = []; for (let i = 0; i < 4; i++) dates.push(addDays(S.now.date, i));
-    sh('h3', null, '📢 יום "תראה לי" — ' + K.user.name);
-    sh('div', { class: 'mute', style: 'margin:6px 0' }, 'ביום מוכרז ' + K.user.name + ' מסמן/ת כרגיל, ואתם גם רואים בשטח. אי-התאמה מסומנת לשיחה — בלי ענישה ובלי פגיעה בנקודות.');
-    sh('div', null, ...dates.map(d => h('button', { class: 'sm ' + (smDeclared(K.user.id, d) ? '' : 'sec'), style: 'margin:4px', onclick: async () => { await api('showme_declare', { userId: K.user.id, date: d, undo: smDeclared(K.user.id, d) }); close(); refresh(); } }, (d === S.now.date ? 'היום' : d === addDays(S.now.date, 1) ? 'מחר' : DAYS[dowOf(d)] + ' ' + shortDate(d)) + (smDeclared(K.user.id, d) ? ' ✓' : ''))));
+    sh.appendChild(h('h3', null, '📢 יום "תראה לי" — ' + K.user.name));
+    sh.appendChild(h('div', { class: 'mute', style: 'margin:6px 0' }, 'ביום מוכרז ' + K.user.name + ' מסמן/ת כרגיל, ואתם גם רואים בשטח. אי-התאמה מסומנת לשיחה — בלי ענישה ובלי פגיעה בנקודות.'));
+    sh.appendChild(h('div', null, ...dates.map(d => h('button', { class: 'sm ' + (smDeclared(K.user.id, d) ? '' : 'sec'), style: 'margin:4px', onclick: async () => { try { await api('showme_declare', { userId: K.user.id, date: d, undo: smDeclared(K.user.id, d) }); close(); refresh(); } catch (e) { toast(errMsg(e)); } } }, (d === S.now.date ? 'היום' : d === addDays(S.now.date, 1) ? 'מחר' : DAYS[dowOf(d)] + ' ' + shortDate(d)) + (smDeclared(K.user.id, d) ? ' ✓' : '')))));
   });
 }
 
