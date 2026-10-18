@@ -312,6 +312,7 @@ function viewKid(root) {
   const greet = hr < 5 ? 'לילה טוב' : hr < 12 ? 'בוקר טוב' : hr < 18 ? 'צהריים טובים' : 'ערב טוב';
   root.appendChild(h('div', { class: 'top' }, h('div', null, h('div', { class: 'hello' }, greet + ', ' + me.name), h('div', { class: 'mute' }, heDate(S.now.date))), ringEl(done, sched.length, sched.length > 0 && done === sched.length)));
   if (S._offline || Q.list().length) root.appendChild(h('div', { class: 'banner' }, S._offline ? 'אין חיבור. הסימונים נשמרים בטלפון ויישלחו כשיחזור.' : 'שולח סימונים...'));
+  if (TAB === 'today' && smDeclared(me.id, S.now.date)) root.appendChild(h('div', { class: 'banner info' }, '📢 היום יום "תראה לי" — מסמנים רק מה שבאמת נעשה. ההורים גם יראו בשטח 😊'));
   if (TAB === 'today') kidToday(root, K, items, sched, done);
   else if (TAB === 'summary') summaryView(root, me.id);
   else kidMe(root);
@@ -408,6 +409,7 @@ function summaryBody(r) {
   const box = h('div');
   box.appendChild(h('div', { class: 'card' }, h('div', { class: 'row between' }, h('div', null, h('h3', null, r.user.name), h('div', { class: 'mute' }, shortDate(r.from) + (r.to !== r.from ? ' - ' + shortDate(r.to) : ''))), h('div', { class: 'center' }, h('div', { style: 'font-size:1.7rem;font-weight:800;color:' + (r.pct >= 80 ? 'var(--ok)' : 'var(--pri)') }, r.total ? r.pct + '%' : '-'), h('div', { class: 'mute' }, r.done + ' מתוך ' + r.total))), h('div', { class: 'bar', style: 'margin-top:10px' }, h('i', { style: 'width:' + r.pct + '%' })), h('div', { class: 'row', style: 'margin-top:10px;gap:6px;flex-wrap:wrap' }, h('span', { class: 'chip' }, '⭐ ' + r.points + ' נקודות'), r.credits ? h('span', { class: 'chip warn' }, '🤝 ' + r.credits + ' קרדיט הורה') : null)));
   if (r.patterns.length) box.appendChild(h('div', { class: 'banner info' }, '📝 ' + r.patterns.join(' · ')));
+  if (r.showme_flags && r.showme_flags.length) box.appendChild(h('div', { class: 'banner' }, '❓ לשיחה (ימי "תראה לי"): ' + r.showme_flags.map(f => f.task + ' ' + shortDate(f.date)).join(' · ') + ' — בלי ענישה, סתם לדבר'));
   if (r.by_task.length) box.appendChild(h('div', { class: 'card' }, h('h3', null, 'לפי משימה'), ...r.by_task.map(t => h('div', { style: 'margin-top:10px' }, h('div', { class: 'row between' }, h('span', null, t.name), h('span', { class: 'mute' }, t.done + ' מתוך ' + t.total)), h('div', { class: 'bar', style: 'height:8px;margin-top:4px' }, h('i', { style: 'width:' + (t.total ? t.done * 100 / t.total : 0) + '%' }))))));
   if (r.days.length > 1 || (r.days[0] && r.days[0].items.length)) box.appendChild(h('div', { class: 'card' }, h('h3', null, 'יום ביום'), ...r.days.slice().reverse().map(d => h('div', { class: 'dayrow' }, h('div', { class: 'dn' }, DAYS[d.dow] + ' ' + shortDate(d.date)), d.paused ? h('span', { class: 'dot p' }, '💤 מושהה') : null, ...d.items.map(i => h('span', { class: 'dot ' + (i.state === 'done' ? (i.source === 'parent_credit' ? 'c' : 'd') : i.state === 'paused' ? 'p' : ''), title: i.note || '' }, (i.state === 'done' ? (i.source === 'parent_credit' ? '🤝 ' : '✓ ') : i.state === 'paused' ? '💤 ' : i.state === 'missed' ? '○ ' : '… ') + i.name)), !d.items.length ? h('span', { class: 'mute' }, 'אין משימות') : null))));
   if (r.positives.length || r.picks.length) box.appendChild(h('div', { class: 'card' }, h('h3', null, '🌟 רגעים טובים'), ...r.positives.map(p => h('div', { style: 'margin-top:6px' }, shortDate(p.date) + ' · ' + p.type + (p.detail ? ' - ' + p.detail : ''))), ...r.picks.map(p => h('div', { style: 'margin-top:6px' }, '🎉 חגיגה שנבחרה: ' + p.text))));
@@ -436,9 +438,9 @@ function parentToday(root) {
     const isRona = K.user.profile === 'rona';
     root.appendChild(h('div', { class: 'card' },
       h('div', { class: 'row between' }, h('div', { class: 'row' }, h('span', { style: 'font-size:1.8rem' }, AV[K.user.id] || '🙂'), h('div', null, h('h3', null, K.user.name), h('div', { class: 'mute' }, K.paused ? '💤 מושהה היום' : done + ' מתוך ' + sched.length + ' · ⭐ ' + K.points_week + ' השבוע'))), ringEl(done, sched.length, false)),
-      ...items.map(it => h('div', { class: 'dayrow' }, h('div', { class: 'grow' }, h('span', { style: it._s === 'done' ? 'text-decoration:line-through;opacity:.7' : '' }, it.name), h('span', { class: 'mute' }, it.time ? ' · ' + it.time : '')), it._s === 'done' ? h('span', { class: 'chip ' + (it.source === 'parent_credit' ? 'warn' : 'ok') }, it.source === 'parent_credit' ? '🤝 קרדיט' : '✓') : isRona ? h('button', { class: 'sm', onclick: async () => { await api('mark_for', { userId: K.user.id, taskId: it.task_id }); refresh(); } }, 'סמנו יחד ✓') : it._s === 'paused' ? h('span', { class: 'chip gray' }, '💤') : h('div', { class: 'row', style: 'gap:6px' }, h('span', { class: 'chip ' + (it._s === 'open' ? '' : 'gray') }, it._s === 'open' ? 'פתוח' : it._s === 'upcoming' ? 'בהמשך' : 'נסגר'), h('button', { class: 'sm sec', onclick: () => creditDialog(K, it) }, 'קרדיט')))),
+      ...items.map(it => h('div', { class: 'dayrow' }, h('div', { class: 'grow' }, h('span', { style: it._s === 'done' ? 'text-decoration:line-through;opacity:.7' : '' }, it.name), h('span', { class: 'mute' }, it.time ? ' · ' + it.time : '')), it._s === 'done' ? h('div', { class: 'row', style: 'gap:6px' }, h('span', { class: 'chip ' + (it.source === 'parent_credit' ? 'warn' : 'ok') }, it.source === 'parent_credit' ? '🤝 קרדיט' : '✓'), !isRona && smDeclared(K.user.id, S.now.date) ? h('button', { class: 'sm ' + (smFlagged(K.user.id, it.task_id, S.now.date) ? '' : 'sec'), onclick: async () => { await api('showme_flag', { userId: K.user.id, taskId: it.task_id, off: smFlagged(K.user.id, it.task_id, S.now.date) }); refresh(); } }, smFlagged(K.user.id, it.task_id, S.now.date) ? '❓ לשיחה' : '❓') : null) : isRona ? h('button', { class: 'sm', onclick: async () => { await api('mark_for', { userId: K.user.id, taskId: it.task_id }); refresh(); } }, 'סמנו יחד ✓') : it._s === 'paused' ? h('span', { class: 'chip gray' }, '💤') : h('div', { class: 'row', style: 'gap:6px' }, h('span', { class: 'chip ' + (it._s === 'open' ? '' : 'gray') }, it._s === 'open' ? 'פתוח' : it._s === 'upcoming' ? 'בהמשך' : 'נסגר'), h('button', { class: 'sm sec', onclick: () => creditDialog(K, it) }, 'קרדיט')))),
       !items.length ? h('div', { class: 'mute' }, 'אין משימות היום') : null,
-      h('div', { class: 'row', style: 'margin-top:10px;gap:8px' }, isRona ? h('button', { class: 'sm sec', onclick: () => openBoard(K) }, '🖼️ לוח של רונה') : null, K.paused ? h('button', { class: 'sm sec', onclick: async () => { await api('pause_set', { userId: K.user.id, from: '' }); refresh(); } }, 'סיום השהיה') : h('button', { class: 'sm sec', onclick: () => pauseDialog(K) }, '💤 מחלה / חופשה / יום קשה'))));
+      h('div', { class: 'row', style: 'margin-top:10px;gap:8px' }, isRona ? h('button', { class: 'sm sec', onclick: () => openBoard(K) }, '🖼️ לוח של רונה') : h('button', { class: 'sm sec', onclick: () => declareDialog(K) }, smDeclared(K.user.id, S.now.date) || smDeclared(K.user.id, addDays(S.now.date, 1)) ? '📢 תראה לי ✓' : '📢 תראה לי'), K.paused ? h('button', { class: 'sm sec', onclick: async () => { await api('pause_set', { userId: K.user.id, from: '' }); refresh(); } }, 'סיום השהיה') : h('button', { class: 'sm sec', onclick: () => pauseDialog(K) }, '💤 מחלה / חופשה / יום קשה'))));
   });
   if (S.picks.length) root.appendChild(h('div', { class: 'card' }, h('h3', null, '🎉 חגיגות שנבחרו'), ...S.picks.slice().reverse().map(p => h('div', { style: 'margin-top:6px' }, nameOf(p.user_id) + ' · שבוע ' + shortDate(p.week) + ': ' + p.text)), h('div', { class: 'mute', style: 'margin-top:6px' }, 'האישור והתיאום מתבצעים בשיחה, לא באפליקציה.')));
 }
@@ -463,6 +465,18 @@ function openBoard(K) {
   }
   draw();
   document.body.appendChild(ov);
+}
+
+
+function smDeclared(userId, date) { return (S.showme || []).some(r => r.kind === 'declare' && r.user_id === userId && r.date === date); }
+function smFlagged(userId, taskId, date) { return (S.showme || []).some(r => r.kind === 'flag' && r.user_id === userId && r.task_id === taskId && r.date === date); }
+function declareDialog(K) {
+  modal((sh, close) => {
+    const dates = []; for (let i = 0; i < 4; i++) dates.push(addDays(S.now.date, i));
+    sh('h3', null, '📢 יום "תראה לי" — ' + K.user.name);
+    sh('div', { class: 'mute', style: 'margin:6px 0' }, 'ביום מוכרז ' + K.user.name + ' מסמן/ת כרגיל, ואתם גם רואים בשטח. אי-התאמה מסומנת לשיחה — בלי ענישה ובלי פגיעה בנקודות.');
+    sh('div', null, ...dates.map(d => h('button', { class: 'sm ' + (smDeclared(K.user.id, d) ? '' : 'sec'), style: 'margin:4px', onclick: async () => { await api('showme_declare', { userId: K.user.id, date: d, undo: smDeclared(K.user.id, d) }); close(); refresh(); } }, (d === S.now.date ? 'היום' : d === addDays(S.now.date, 1) ? 'מחר' : DAYS[dowOf(d)] + ' ' + shortDate(d)) + (smDeclared(K.user.id, d) ? ' ✓' : ''))));
+  });
 }
 
 function creditDialog(K, it) {
