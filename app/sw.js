@@ -1,6 +1,6 @@
 /* משפחתיקה service worker: app shell cache + web push */
 const CACHE = 'mishpahtica-v1';
-const SHELL = ['./', './index.html', './manifest.json', './icon-192.png'];
+const SHELL = ['./', './index.html', './manifest.json', './icon.svg'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL).catch(() => {})).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', e => {
@@ -15,7 +15,7 @@ self.addEventListener('push', e => {
   const data = (d && d.data) || {};
   const title = data.title || n.title || 'משפחתיקה';
   const body = data.body || n.body || '';
-  e.waitUntil(self.registration.showNotification(title, { body, icon: 'icon-192.png', badge: 'icon-192.png', dir: 'rtl', lang: 'he', tag: n.tag || data.id || 'mp' }));
+  e.waitUntil(self.registration.showNotification(title, { body, icon: 'icon.svg', badge: 'icon.svg', dir: 'rtl', lang: 'he', tag: n.tag || data.id || 'mp' }));
 });
 self.addEventListener('notificationclick', e => {
   e.notification.close();
