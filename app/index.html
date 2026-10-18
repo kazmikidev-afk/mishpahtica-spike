@@ -6,8 +6,8 @@
 <title>משפחתיקה</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#2f6fed">
-<link rel="icon" type="image/svg+xml" href="icon.svg">
-<link rel="apple-touch-icon" href="icon.svg">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <style>
 :root{--bg:#f4f6fb;--card:#fff;--ink:#1c2333;--mute:#6b7488;--pri:#2f6fed;--pri2:#e6eeff;--ok:#1f9d63;--ok2:#e2f6ec;--warn:#e08a00;--warn2:#fff3dc;--line:#e3e8f2;--r:18px}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -48,6 +48,7 @@ label{display:block;font-size:.88rem;color:var(--mute);margin:12px 0 4px}
 .nav button{flex:1;background:transparent;color:var(--mute);border-radius:0;padding:10px 4px;min-height:60px;font-size:.78rem;display:flex;flex-direction:column;align-items:center;gap:2px}
 .nav button .ic{font-size:1.4rem}
 .nav button.on{color:var(--pri);font-weight:700}
+.install-btn{width:100%;margin-top:14px;background:#fff;color:var(--pri);border:1.5px solid var(--pri)}
 .big{background:linear-gradient(135deg,#2f6fed,#5b8cff);color:#fff;border-radius:24px;padding:22px 18px;text-align:center;margin:12px 0}
 .big .t{font-size:1.7rem;font-weight:800;margin:8px 0}
 .big button{background:#fff;color:var(--pri);font-size:1.15rem;font-weight:700;width:100%;margin-top:10px}
@@ -235,6 +236,7 @@ async function viewLogin() {
   const root = document.getElementById('app'); root.innerHTML = ''; document.querySelectorAll('.nav').forEach(n => n.remove());
   root.appendChild(h('div', { class: 'center', style: 'padding:30px 0 6px' }, h('div', { style: 'font-size:3rem' }, '🏠'), h('h1', null, 'משפחתיקה'), h('div', { class: 'mute' }, 'מי נכנס?')));
   const box = h('div', { class: 'people' }, h('div', { class: 'card center mute', style: 'grid-column:1/3' }, 'טוען...')); root.appendChild(box);
+  if (!inStandalone()) root.appendChild(h('button', { class: 'install-btn', onclick: installClick }, '\u{1F4F2} הוספה למסך הבית'));
   try {
     const r = await api('users_public');
     box.innerHTML = '';
@@ -537,6 +539,16 @@ window.addEventListener('online', () => { flushQueue().then(refresh); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
 setInterval(() => { if (!document.hidden && SESSION.token) refresh(); }, 60000);
 setInterval(() => { if (!document.hidden && SESSION.token && S) render(); }, 30000);
+let DEFERRED_INSTALL = null;
+function isIOS() { return /iphone|ipad|ipod/i.test(navigator.userAgent); }
+function inStandalone() { return (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true; }
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); DEFERRED_INSTALL = e; });
+window.addEventListener('appinstalled', () => { DEFERRED_INSTALL = null; const b = document.querySelector('.install-btn'); if (b) b.remove(); });
+async function installClick() {
+  if (DEFERRED_INSTALL) { try { DEFERRED_INSTALL.prompt(); await DEFERRED_INSTALL.userChoice; } catch (e) {} DEFERRED_INSTALL = null; }
+  else if (isIOS()) alert('\u05DC\u05D4\u05D5\u05E1\u05E4\u05D4 \u05DC\u05DE\u05E1\u05DA \u05D4\u05D1\u05D9\u05EA: \u05DC\u05D7\u05E6\u05D5 \u05E2\u05DC \u05DB\u05E4\u05EA\u05D5\u05E8 \u05D4\u05E9\u05D9\u05EA\u05D5\u05E3 \u05E9\u05DC \u05E1\u05E4\u05D0\u05E8\u05D9 (\u05E8\u05D9\u05D1\u05D5\u05E2 \u05E2\u05DD \u05D7\u05E5 \u05DC\u05DE\u05E2\u05DC\u05D4) \u05D5\u05D0\u05D6 "\u05D4\u05D5\u05E1\u05E4\u05D4 \u05DC\u05DE\u05E1\u05DA \u05D4\u05D1\u05D9\u05EA".');
+  else alert('\u05DC\u05D4\u05D5\u05E1\u05E4\u05D4 \u05DC\u05DE\u05E1\u05DA \u05D4\u05D1\u05D9\u05EA: \u05E4\u05EA\u05D7\u05D5 \u05D0\u05EA \u05EA\u05E4\u05E8\u05D9\u05D8 \u05D4\u05D3\u05E4\u05D3\u05E4\u05DF \u22EE \u05D5\u05DC\u05D7\u05E6\u05D5 "\u05D4\u05EA\u05E7\u05E0\u05EA \u05D0\u05E4\u05DC\u05D9\u05E7\u05E6\u05D9\u05D4" \u05D0\u05D5 "\u05D4\u05D5\u05E1\u05E4\u05D4 \u05DC\u05DE\u05E1\u05DA \u05D4\u05D1\u05D9\u05EA".');
+}
 window.addEventListener('hashchange', route);
 route();
 setTimeout(refreshPush, 3000);
