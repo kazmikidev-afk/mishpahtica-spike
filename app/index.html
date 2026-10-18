@@ -85,6 +85,18 @@ label{display:block;font-size:.88rem;color:var(--mute);margin:12px 0 4px}
 .center{text-align:center}
 .hide{display:none}
 @media(max-width:380px){body{font-size:16px}}
+
+.board-ov{position:fixed;inset:0;background:#fff;z-index:80;overflow-y:auto;padding:14px}
+.board-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.bcard{border:3px solid #e3e8f0;border-radius:22px;padding:18px 8px;text-align:center;background:#fafbff;cursor:pointer}
+.bcard .bi{font-size:3.4rem;line-height:1.2}
+.bcard .bn{font-size:1.25rem;font-weight:700;margin-top:6px}
+.bcard.done{border-color:#35c48d;background:#eafff5;cursor:default}
+.bcard.done .bi{opacity:.35}
+.bstick{font-size:2rem;margin-top:4px}
+.burst{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:90;pointer-events:none}
+.burst span{font-size:7rem;animation:pop 1.2s ease forwards}
+@keyframes pop{0%{transform:scale(.2);opacity:0}30%{transform:scale(1.15);opacity:1}80%{transform:scale(1);opacity:1}100%{transform:scale(1.05);opacity:0}}
 </style>
 </head>
 <body>
@@ -426,10 +438,33 @@ function parentToday(root) {
       h('div', { class: 'row between' }, h('div', { class: 'row' }, h('span', { style: 'font-size:1.8rem' }, AV[K.user.id] || '🙂'), h('div', null, h('h3', null, K.user.name), h('div', { class: 'mute' }, K.paused ? '💤 מושהה היום' : done + ' מתוך ' + sched.length + ' · ⭐ ' + K.points_week + ' השבוע'))), ringEl(done, sched.length, false)),
       ...items.map(it => h('div', { class: 'dayrow' }, h('div', { class: 'grow' }, h('span', { style: it._s === 'done' ? 'text-decoration:line-through;opacity:.7' : '' }, it.name), h('span', { class: 'mute' }, it.time ? ' · ' + it.time : '')), it._s === 'done' ? h('span', { class: 'chip ' + (it.source === 'parent_credit' ? 'warn' : 'ok') }, it.source === 'parent_credit' ? '🤝 קרדיט' : '✓') : isRona ? h('button', { class: 'sm', onclick: async () => { await api('mark_for', { userId: K.user.id, taskId: it.task_id }); refresh(); } }, 'סמנו יחד ✓') : it._s === 'paused' ? h('span', { class: 'chip gray' }, '💤') : h('div', { class: 'row', style: 'gap:6px' }, h('span', { class: 'chip ' + (it._s === 'open' ? '' : 'gray') }, it._s === 'open' ? 'פתוח' : it._s === 'upcoming' ? 'בהמשך' : 'נסגר'), h('button', { class: 'sm sec', onclick: () => creditDialog(K, it) }, 'קרדיט')))),
       !items.length ? h('div', { class: 'mute' }, 'אין משימות היום') : null,
-      h('div', { class: 'row', style: 'margin-top:10px;gap:8px' }, K.paused ? h('button', { class: 'sm sec', onclick: async () => { await api('pause_set', { userId: K.user.id, from: '' }); refresh(); } }, 'סיום השהיה') : h('button', { class: 'sm sec', onclick: () => pauseDialog(K) }, '💤 מחלה / חופשה / יום קשה'))));
+      h('div', { class: 'row', style: 'margin-top:10px;gap:8px' }, isRona ? h('button', { class: 'sm sec', onclick: () => openBoard(K) }, '🖼️ לוח של רונה') : null, K.paused ? h('button', { class: 'sm sec', onclick: async () => { await api('pause_set', { userId: K.user.id, from: '' }); refresh(); } }, 'סיום השהיה') : h('button', { class: 'sm sec', onclick: () => pauseDialog(K) }, '💤 מחלה / חופשה / יום קשה'))));
   });
   if (S.picks.length) root.appendChild(h('div', { class: 'card' }, h('h3', null, '🎉 חגיגות שנבחרו'), ...S.picks.slice().reverse().map(p => h('div', { style: 'margin-top:6px' }, nameOf(p.user_id) + ' · שבוע ' + shortDate(p.week) + ': ' + p.text)), h('div', { class: 'mute', style: 'margin-top:6px' }, 'האישור והתיאום מתבצעים בשיחה, לא באפליקציה.')));
 }
+
+const BOARD_ICONS = [['קימה', '🌅'], ['ביגוד', '👕'], ['צחצוח', '🦷'], ['טיול', '🐕'], ['בגדים לגן', '🎒'], ['שולחן שבת', '🕯️']];
+const STICKERS = ['⭐', '🦄', '🌈', '🎈', '🍭', '🧸', '🌟', '💖', '🦋', '🍓'];
+function boardIcon(n) { const f = BOARD_ICONS.find(([k]) => n.indexOf(k) >= 0); return f ? f[1] : '⭐'; }
+function cheer() { try { const C = window.AudioContext || window.webkitAudioContext; const ctx = new C(); [523, 659, 784, 1047].forEach((f, i) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'triangle'; o.frequency.value = f; g.gain.setValueAtTime(0.0001, ctx.currentTime + i * 0.09); g.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + i * 0.09 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + i * 0.09 + 0.25); o.connect(g).connect(ctx.destination); o.start(ctx.currentTime + i * 0.09); o.stop(ctx.currentTime + i * 0.09 + 0.3); }); } catch (e) { } }
+function burst() { const s = STICKERS[Math.floor(Math.random() * STICKERS.length)]; const d = h('div', { class: 'burst' }, h('span', null, s)); document.body.appendChild(d); setTimeout(() => d.remove(), 1300); }
+function openBoard(K) {
+  const ov = h('div', { class: 'board-ov' });
+  function draw() {
+    ov.innerHTML = '';
+    const items = K.items.map(it => Object.assign({}, it, { _s: it.state === 'done' ? 'done' : calcState(it) }));
+    const done = items.filter(i => i._s === 'done').length;
+    ov.appendChild(h('div', { class: 'row between' }, h('div', { class: 'row' }, h('span', { style: 'font-size:2rem' }, '👧'), h('div', null, h('h2', null, 'הלוח של רונה'), h('div', { class: 'mute' }, done + ' מתוך ' + items.length))), h('button', { class: 'sm sec', onclick: () => ov.remove() }, 'סגירה ✕')));
+    ov.appendChild(h('div', { class: 'board-grid' }, ...items.map(it => {
+      const d = it._s === 'done';
+      return h('div', { class: 'bcard' + (d ? ' done' : ''), onclick: async () => { if (d) return; const r = await api('mark_for', { userId: K.user.id, taskId: it.task_id }); if (r && r.ok) { cheer(); burst(); } await refresh(); K = S.kids.find(k => k.user.id === K.user.id) || K; draw(); } }, h('div', { class: 'bi' }, boardIcon(it.name)), h('div', { class: 'bn' }, it.name), d ? h('div', { class: 'bstick' }, '🌟') : (it.time ? h('div', { class: 'mute' }, it.time) : null));
+    })));
+    if (items.length && done === items.length) ov.appendChild(h('div', { class: 'card center', style: 'margin-top:14px;font-size:1.3rem' }, '🎉 כל הכבוד רונה! הכל הושלם 🎉'));
+  }
+  draw();
+  document.body.appendChild(ov);
+}
+
 function creditDialog(K, it) {
   modal((sh, close) => {
     const dates = []; for (let i = 0; i < 8; i++) dates.push(addDays(S.now.date, -i));
