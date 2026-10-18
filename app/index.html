@@ -185,10 +185,10 @@ async function enablePush() {
 }
 async function refreshPush() {
   try {
-    if (LS.get('mp_push') && 'Notification' in window && Notification.permission === 'granted' && SESSION.token) {
+    if ('Notification' in window && Notification.permission === 'granted' && SESSION.token) {
       const reg = await navigator.serviceWorker.ready; const m = await fb();
       const tok = await m.getToken({ vapidKey: VAPID, serviceWorkerRegistration: reg });
-      if (tok !== LS.get('mp_push') || LS.get('mp_push_user') !== SESSION.user.id) { await api('push_register', { fcm: tok, device: 'refresh' }); LS.set('mp_push', tok); LS.set('mp_push_user', SESSION.user.id); }
+      if (tok) { await api('push_register', { fcm: tok, device: 'refresh' }); LS.set('mp_push', tok); LS.set('mp_push_user', SESSION.user.id); }
     }
   } catch (e) {}
 }
